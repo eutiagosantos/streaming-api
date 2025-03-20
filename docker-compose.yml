@@ -1,0 +1,34 @@
+version: '3'
+
+services:
+  postgres:
+    image: postgres:latest
+    restart: always
+    hostname: postgres
+    container_name: streaming-api-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=streaming
+      - POSTGRES_HOST=localhost
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./scripts/1_init_schema.sql:/docker-entrypoint-initdb.d/1_init_schema.sql
+      - ./scripts/2_streamkey_populate.sql:/docker-entrypoint-initdb.d/2_streamkey_populate.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  auth-server:
+    build:
+      dockerfile: ./Dockerfile
+      context: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+volumes:
+  postgres_data:
